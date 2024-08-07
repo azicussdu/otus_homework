@@ -1,4 +1,4 @@
-module github.com/azicussdu/hw01_hello_otus
+module github.com/azicussdu/otus_homework/hw01_hello_otus
 
 go 1.22
 
