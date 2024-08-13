@@ -50,9 +50,11 @@ func Unpack(str string) (string, error) {
 				}
 			}
 		default:
+			if slashIsOpen {
+				return "", ErrInvalidString
+			}
 			builder.WriteString(string(chr))
 			lastRune = chr
-			slashIsOpen = false
 		}
 	}
 
