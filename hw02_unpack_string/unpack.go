@@ -58,6 +58,9 @@ func Unpack(str string) (string, error) {
 		}
 	}
 
+	if slashIsOpen {
+		return "", ErrInvalidString
+	}
 	return builder.String(), nil
 }
 
