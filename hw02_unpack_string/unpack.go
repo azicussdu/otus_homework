@@ -52,6 +52,7 @@ func Unpack(str string) (string, error) {
 		default:
 			builder.WriteString(string(chr))
 			lastRune = chr
+			slashIsOpen = false
 		}
 	}
 
