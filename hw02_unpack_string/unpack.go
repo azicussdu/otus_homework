@@ -20,20 +20,16 @@ func Unpack(str string) (string, error) {
 	}
 
 	slashIsOpen := false
+	// we should use rune not byte (as letters can be more than 1 byte (not only ASCII))
+	var lastRune rune
 	for ind, chr := range str {
-		lastChar := ""
-		if builder.Len() > 0 {
-			lastChar = string(builder.String()[builder.Len()-1])
-		}
-
 		switch {
-		case unicode.IsLetter(chr) || chr == '\n':
-			builder.WriteString(string(chr))
 		case chr == '\\':
 			if !slashIsOpen {
 				slashIsOpen = true
 			} else {
 				builder.WriteString(string(chr))
+				lastRune = chr
 				slashIsOpen = false
 			}
 		case unicode.IsDigit(chr):
@@ -43,15 +39,19 @@ func Unpack(str string) (string, error) {
 				removeLastChar(&builder)
 			case slashIsOpen:
 				builder.WriteString(string(chr))
+				lastRune = chr
 				slashIsOpen = false
 			case len(str) > ind+1 && unicode.IsDigit(rune(str[ind+1])):
 				return "", ErrInvalidString
 			default:
 				nTimes, err := strconv.Atoi(string(chr))
 				if err == nil {
-					builder.WriteString(strings.Repeat(lastChar, nTimes-1))
+					builder.WriteString(strings.Repeat(string(lastRune), nTimes-1))
 				}
 			}
+		default:
+			builder.WriteString(string(chr))
+			lastRune = chr
 		}
 	}
 
