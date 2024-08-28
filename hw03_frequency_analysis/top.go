@@ -60,6 +60,7 @@ func trimWord(w string) string {
 	return strings.TrimFunc(strings.ToLower(w), func(r rune) bool {
 		// удаляем все что не буква и не дефис '-'
 		// я так понял дефис удалять нельзя так как '-----' считается как слово
-		return !unicode.IsLetter(r) && r != '-'
+
+		return unicode.IsPunct(r) && r != '-'
 	})
 }
