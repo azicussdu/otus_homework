@@ -3,7 +3,7 @@ package hw04lrucache
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require" //nolint:depguard
 )
 
 func TestList(t *testing.T) {
@@ -47,5 +47,32 @@ func TestList(t *testing.T) {
 			elems = append(elems, i.Value.(int))
 		}
 		require.Equal(t, []int{70, 80, 60, 40, 10, 30, 50}, elems)
+	})
+
+	t.Run("complex 2", func(t *testing.T) {
+		l := NewList()
+
+		l.PushFront(5)               // [5]
+		l.PushFront(4)               // [4, 5]
+		l.PushFront(3)               // [3, 4, 5]
+		l.MoveToFront(l.Back().Prev) // [4, 3, 5]
+
+		require.Equal(t, 4, l.Front().Value)
+		require.Equal(t, 3, l.Front().Next.Value)
+
+		for _, v := range [...]int{6, 7, 8} {
+			l.PushBack(v)
+		} // [4, 3, 5, 6, 7, 8]
+
+		require.Equal(t, 6, l.Len())
+
+		l.Remove(l.Front()) // [3, 5, 6, 7, 8]
+		l.Remove(l.Back())  // [3, 5, 6, 7]
+
+		elems := make([]int, 0, l.Len())
+		for i := l.Back(); i != nil; i = i.Prev {
+			elems = append(elems, i.Value.(int))
+		}
+		require.Equal(t, []int{7, 6, 5, 3}, elems)
 	})
 }
