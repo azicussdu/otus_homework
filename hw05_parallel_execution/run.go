@@ -11,7 +11,7 @@ type Task func() error
 
 // Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n, m int) error {
-	tasksChan := make(chan Task) // should be unbuffered, so we can close it when errorsCount > m
+	tasksChan := make(chan Task, n)
 	errorsChan := make(chan error, len(tasks))
 	stopChan := make(chan struct{}) // flag that all tasks are finished or m errors occurred
 
@@ -43,8 +43,7 @@ func Run(tasks []Task, n, m int) error {
 			select {
 			case <-stopChan: // stop sending tasks to channel if we have m errors
 				return
-			default:
-				tasksChan <- task
+			case tasksChan <- task:
 			}
 		}
 	}()
