@@ -1,5 +1,9 @@
 package hw06pipelineexecution
 
+import (
+	"time"
+)
+
 type (
 	In  = <-chan interface{}
 	Out = In
@@ -9,6 +13,45 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	// Place your code here.
-	return nil
+	for _, stage := range stages {
+		in = doStageWork(in, done, stage)
+	}
+	return in
+}
+
+func doStageWork(in In, done In, stage Stage) Out {
+	outCh := make(Bi)
+	go func() {
+		defer close(outCh)
+		stOut := stage(in)
+
+		for {
+			select {
+			case <-done:
+				return
+			case value, ok := <-stOut:
+				if !ok {
+					return
+				}
+				select {
+				case <-done:
+					return
+				case outCh <- value:
+				}
+			}
+		}
+	}()
+	return outCh
+}
+
+var OneStage = func(in In) (out Out) {
+	outCh := make(Bi)
+	go func() {
+		defer close(outCh)
+		for value := range in {
+			time.Sleep(time.Millisecond * 100) // Emulate hard work.
+			outCh <- value
+		}
+	}()
+	return outCh
 }
