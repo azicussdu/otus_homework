@@ -20,10 +20,12 @@ func doStageWork(in In, done In, stage Stage) Out {
 	go func() {
 		defer close(outCh)
 		stOut := stage(in)
-
 		for {
 			select {
 			case <-done:
+				// So we continue to read from stOut until it's closed
+				// for range stOut {
+				// }
 				return
 			case value, ok := <-stOut:
 				if !ok {
@@ -31,6 +33,8 @@ func doStageWork(in In, done In, stage Stage) Out {
 				}
 				select {
 				case <-done:
+					// for range stOut {
+					// }
 					return
 				case outCh <- value:
 				}
