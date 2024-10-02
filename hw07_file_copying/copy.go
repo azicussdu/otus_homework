@@ -3,11 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/cheggaaa/pb/v3" //nolint:depguard
 	"io"
 	"os"
-	"path/filepath"
-
-	"github.com/cheggaaa/pb/v3" //nolint:depguard
 )
 
 var (
@@ -29,12 +27,12 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 	defer closeFile(readFile)
 
-	if filepath.Ext(fromPath) != ".txt" {
-		return ErrUnsupportedFile
-	}
-
 	fileInfo, _ := readFile.Stat()
 	fileSize := fileInfo.Size()
+
+	if !fileInfo.Mode().IsRegular() {
+		return ErrUnsupportedFile
+	}
 
 	if offset > fileSize {
 		return ErrOffsetExceedsFileSize
@@ -51,19 +49,50 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return fmt.Errorf("failed to seek in file: %w", err)
 	}
 
-	bytesToRead := fileSize - offset
-	// As I got it if limit is 0 we have to copy the whole file
-	if limit == 0 || limit > bytesToRead {
-		limit = bytesToRead
+	if limit == 0 || limit > (fileSize-offset) {
+		limit = fileSize - offset
 	}
 
 	bar := pb.Full.Start64(limit)
 	barReader := bar.NewProxyReader(readFile)
 
-	_, err = io.CopyN(writeFile, barReader, limit)
-	if err != nil && errors.Is(err, io.EOF) {
-		return fmt.Errorf("failed to copy data: %w", err)
+	// buffer size is 10KB so it can copy the whole content of input.txt file
+	// in case if fromPath == toPath
+	bufferSize := 10 * 1024
+	buffer := make([]byte, bufferSize)
+
+	totalCopied := int64(0)
+
+	for totalCopied < limit {
+		bytesRemaining := limit - totalCopied
+
+		bytesToRead := bufferSize
+		if bytesRemaining < int64(bufferSize) {
+			bytesToRead = int(bytesRemaining)
+		}
+
+		var n int
+		n, err = barReader.Read(buffer[:bytesToRead]) // read only bytesToRead bytes
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("failed to read data: %w", err)
+		}
+		if n == 0 {
+			break // If data to read is finished
+		}
+
+		_, err = writeFile.Write(buffer[:n]) // write only n bytes
+		if err != nil {
+			err = os.Remove(writeFile.Name()) // remove file if write fails
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("failed to write data: %w", err)
+		}
+
+		// Update the total number of bytes copied
+		totalCopied += int64(n)
 	}
+	bar.Finish()
 
 	return nil
 }
