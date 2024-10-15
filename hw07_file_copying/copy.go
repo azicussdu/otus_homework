@@ -15,13 +15,6 @@ var (
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
 )
 
-func closeFile(file *os.File) {
-	err := file.Close()
-	if err != nil {
-		_ = fmt.Errorf("failed to close file: %w", err)
-	}
-}
-
 func copyContent(readFile, writeFile *os.File, offset, limit, fileSize int64) error {
 	if _, err := readFile.Seek(offset, io.SeekStart); err != nil {
 		return fmt.Errorf("failed to seek in file: %w", err)
@@ -44,11 +37,20 @@ func copyContent(readFile, writeFile *os.File, offset, limit, fileSize int64) er
 }
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-	readFile, err := os.Open(fromPath)
+	absFromPath, err := filepath.Abs(fromPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for fromPath: %w", err)
+	}
+
+	absToPath, err := filepath.Abs(toPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path for toPath: %w", err)
+	}
+
+	readFile, err := os.Open(absFromPath)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer closeFile(readFile)
 
 	fileInfo, _ := readFile.Stat()
 	fileSize := fileInfo.Size()
@@ -61,52 +63,32 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return ErrOffsetExceedsFileSize
 	}
 
-	if fromPath == toPath {
-		readFile, err = handleTempFileCopy(toPath, readFile, offset, limit, fileSize)
-		if err != nil {
-			return err
-		}
-		offset = 0
-	}
-
-	writeFile, err := os.Create(toPath)
+	tmpFile, err := os.CreateTemp(filepath.Dir(absToPath), "tempfile-*")
 	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
+		return fmt.Errorf("failed to create temporary file: %w", err)
 	}
-	defer closeFile(writeFile)
 
-	if err = copyContent(readFile, writeFile, offset, limit, fileSize); err != nil {
+	if err = copyContent(readFile, tmpFile, offset, limit, fileSize); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func handleTempFileCopy(toPath string, readFile *os.File, offset, limit, fileSize int64) (*os.File, error) {
-	tmpFile, err := os.CreateTemp(filepath.Dir(toPath), "tempfile-*")
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary file: %w", err)
-	}
-	defer closeFile(tmpFile)
-
-	if err = copyContent(readFile, tmpFile, offset, limit, fileSize); err != nil {
-		return nil, err
-	}
 	if err = tmpFile.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close temporary file: %w", err)
+		return fmt.Errorf("failed to close temporary file: %w", err)
 	}
 
-	tmpFile, err = os.Open(tmpFile.Name())
-	if err != nil {
-		return nil, fmt.Errorf("failed to reopen temporary file: %w", err)
+	if err = readFile.Close(); err != nil {
+		return fmt.Errorf("failed to close the original file: %w", err)
 	}
 
-	defer func() {
-		err = os.Remove(tmpFile.Name())
-		if err != nil {
-			return
+	if absFromPath == absToPath {
+		if err = os.Remove(absFromPath); err != nil {
+			return fmt.Errorf("failed to remove original file: %w", err)
 		}
-	}()
+	}
 
-	return tmpFile, nil
+	if err = os.Rename(tmpFile.Name(), absToPath); err != nil {
+		return fmt.Errorf("failed to rename temporary file: %w", err)
+	}
+
+	return nil
 }
