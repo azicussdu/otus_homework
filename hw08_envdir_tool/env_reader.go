@@ -42,7 +42,8 @@ func ReadDir(dir string) (Environment, error) {
 		defer f.Close()
 
 		reader := bufio.NewReader(f)
-		line, err := reader.ReadString('\n') // Read until \n
+		line, err := reader.ReadString('\n')  // Read until \n
+		line = strings.TrimSuffix(line, "\n") // Remove if you find newline
 
 		if err != nil && !errors.Is(err, io.EOF) {
 			return nil, err // can't read file
@@ -53,7 +54,7 @@ func ReadDir(dir string) (Environment, error) {
 			continue
 		}
 
-		value := strings.TrimRight(line, " \n\r")       // remove right side spaces and newlines
+		value := strings.TrimRight(line, " \t")         // remove right side spaces and tabs
 		value = strings.ReplaceAll(value, "\x00", "\n") // replace \0 to \n
 		env[name] = EnvValue{Value: value, NeedRemove: false}
 	}

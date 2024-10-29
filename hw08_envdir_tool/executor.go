@@ -24,12 +24,11 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 
 	var envVars []string
 	for name, value := range env {
-		if value.NeedRemove {
-			os.Unsetenv(name)
-		} else {
-			os.Setenv(name, value.Value)
+		if !value.NeedRemove {
 			envVars = append(envVars, name+"="+value.Value)
+			continue
 		}
+		os.Unsetenv(name)
 	}
 	// loading environment variables
 	command.Env = append(os.Environ(), envVars...)
