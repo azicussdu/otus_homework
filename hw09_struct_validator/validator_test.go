@@ -38,23 +38,121 @@ type (
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
+		name        string
 		in          interface{}
 		expectedErr error
 	}{
 		{
-			// Place your code here.
+			name: "valid User",
+			in: User{
+				ID:     "12345678-1234-5678-1234-567812345678",
+				Age:    25,
+				Email:  "test@example.com",
+				Role:   "admin",
+				Phones: []string{"12345678901"},
+			},
+			expectedErr: nil,
 		},
-		// ...
-		// Place your code here.
+		{
+			name: "invalid User - wrong ID length",
+			in: User{
+				ID:     "short-id",
+				Age:    25,
+				Email:  "test@example.com",
+				Role:   "admin",
+				Phones: []string{"12345678901"},
+			},
+			expectedErr: ValidationErrors{
+				{Field: "ID", Err: fmt.Errorf("length must be 36")},
+			},
+		},
+		{
+			name: "invalid User - age below min",
+			in: User{
+				ID:     "12345678-1234-5678-1234-567812345678",
+				Age:    17,
+				Email:  "test@example.com",
+				Role:   "admin",
+				Phones: []string{"12345678901"},
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Age", Err: fmt.Errorf("must be >= 18")},
+			},
+		},
+		{
+			name: "invalid User - email format",
+			in: User{
+				ID:     "12345678-1234-5678-1234-567812345678",
+				Age:    25,
+				Email:  "invalid-email",
+				Role:   "admin",
+				Phones: []string{"12345678901"},
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Email", Err: fmt.Errorf("must match regexp ^\\w+@\\w+\\.\\w+$")},
+			},
+		},
+		{
+			name: "valid App version",
+			in: App{
+				Version: "1.0.0",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "invalid App version length",
+			in: App{
+				Version: "1.0",
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Version", Err: fmt.Errorf("length must be 5")},
+			},
+		},
+		{
+			name: "valid Token struct - no validation tags",
+			in: Token{
+				Header:    []byte("header"),
+				Payload:   []byte("payload"),
+				Signature: []byte("signature"),
+			},
+			expectedErr: nil, // no errors expected
+		},
+		{
+			name: "valid Response code",
+			in: Response{
+				Code: 200,
+			},
+			expectedErr: nil, // no errors expected
+		},
+		{
+			name: "invalid Response code",
+			in: Response{
+				Code: 403,
+			},
+			expectedErr: ValidationErrors{
+				{Field: "Code", Err: fmt.Errorf("must be one of [200, 404, 500]")},
+			},
+		},
 	}
 
 	for i, tt := range tests {
-		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
-			tt := tt
-			t.Parallel()
+		t.Run(fmt.Sprintf("case %d: %s", i, tt.name), func(t *testing.T) {
+			err := Validate(tt.in)
 
-			// Place your code here.
-			_ = tt
+			// Сравниваем ошибки
+			if tt.expectedErr == nil && err != nil {
+				t.Errorf("expected no error, but got: %v", err)
+			} else if tt.expectedErr != nil {
+				if ve, ok := err.(ValidationErrors); ok {
+					for j, veErr := range ve {
+						if veErr.Field != tt.expectedErr.(ValidationErrors)[j].Field || veErr.Err.Error() != tt.expectedErr.(ValidationErrors)[j].Err.Error() {
+							t.Errorf("expected error for field %s to be %v, but got %v", veErr.Field, tt.expectedErr.(ValidationErrors)[j].Err, veErr.Err)
+						}
+					}
+				} else {
+					t.Errorf("expected ValidationErrors type, but got: %v", err)
+				}
+			}
 		})
 	}
 }
