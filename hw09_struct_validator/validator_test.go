@@ -139,6 +139,8 @@ func TestValidate(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("case %d: %s", i, tt.name), func(t *testing.T) {
+			t.Parallel()
+
 			err := Validate(tt.in)
 
 			// Comparing expected and actual errors
