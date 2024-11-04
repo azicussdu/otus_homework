@@ -17,7 +17,7 @@ type ValidationError struct {
 type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
-	var errs []string
+	errs := make([]string, 0, len(v))
 	for _, err := range v {
 		errs = append(errs, fmt.Sprintf("%s: %s\n", err.Field, err.Err))
 	}
@@ -29,7 +29,7 @@ func Validate(v interface{}) error {
 
 	val := reflect.ValueOf(v)
 	if val.Kind() != reflect.Struct {
-		return errors.New("Validation input must be a struct type")
+		return errors.New("validation input must be a struct type")
 	}
 
 	// iterating each field of the struct
@@ -42,39 +42,8 @@ func Validate(v interface{}) error {
 			continue
 		}
 
-		rules := strings.Split(tag, "|")
-		// iterate over each rule
-		for _, rule := range rules {
-			ruleKeyVal := strings.Split(rule, ":") // ex: ["min"]["18"]
-			if len(ruleKeyVal) != 2 {
-				return fmt.Errorf("invalid rule format in: %s", rule)
-			}
-
-			switch valField.Kind() {
-			case reflect.String:
-				if err := validateString(valField.String(), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
-					validationErrors = append(validationErrors, ValidationError{Field: valTypeField.Name, Err: err})
-				}
-			case reflect.Int:
-				if err := validateInteger(int(valField.Int()), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
-					validationErrors = append(validationErrors, ValidationError{Field: valTypeField.Name, Err: err})
-				}
-			case reflect.Slice:
-				for j := 0; j < valField.Len(); j++ {
-					elem := valField.Index(j)
-					if elem.Kind() == reflect.String {
-						if err := validateString(elem.String(), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
-							validationErrors = append(validationErrors, ValidationError{Field: valTypeField.Name, Err: err})
-						}
-					} else if elem.Kind() == reflect.Int {
-						if err := validateInteger(int(elem.Int()), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
-							validationErrors = append(validationErrors, ValidationError{Field: valTypeField.Name, Err: err})
-						}
-					}
-				}
-			default:
-				continue
-			}
+		if err := validateRules(strings.Split(tag, "|"), valField, validationErrors, valTypeField.Name); err != nil {
+			return err
 		}
 	}
 
@@ -82,6 +51,44 @@ func Validate(v interface{}) error {
 		return validationErrors
 	}
 
+	return nil
+}
+
+func validateRules(rules []string, valField reflect.Value, valErrors ValidationErrors, varTypeFieldName string) error {
+	// iterate over each rule
+	for _, rule := range rules {
+		ruleKeyVal := strings.Split(rule, ":") // ex: ["min"]["18"]
+		if len(ruleKeyVal) != 2 {
+			return fmt.Errorf("invalid rule format in: %s", rule)
+		}
+
+		//nolint:exhaustive
+		switch valField.Kind() {
+		case reflect.String:
+			if err := validateString(valField.String(), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
+				valErrors = append(valErrors, ValidationError{Field: varTypeFieldName, Err: err})
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if err := validateInteger(int(valField.Int()), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
+				valErrors = append(valErrors, ValidationError{Field: varTypeFieldName, Err: err})
+			}
+		case reflect.Slice:
+			for j := 0; j < valField.Len(); j++ {
+				elem := valField.Index(j)
+				if elem.Kind() == reflect.String {
+					if err := validateString(elem.String(), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
+						valErrors = append(valErrors, ValidationError{Field: varTypeFieldName, Err: err})
+					}
+				} else if elem.Kind() == reflect.Int {
+					if err := validateInteger(int(elem.Int()), ruleKeyVal[0], ruleKeyVal[1]); err != nil {
+						valErrors = append(valErrors, ValidationError{Field: varTypeFieldName, Err: err})
+					}
+				}
+			}
+		default:
+			return fmt.Errorf("unsupported field type: %s", valField.Kind())
+		}
+	}
 	return nil
 }
 

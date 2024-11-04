@@ -2,6 +2,7 @@ package hw09structvalidator
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 )
@@ -69,13 +70,14 @@ func TestValidate(t *testing.T) {
 		{
 			name: "invalid User - age below min",
 			in: User{
-				ID:     "12345678-1234-5678-1234-567812345678",
+				ID:     "12345678-123324-5678-1234-567812345678",
 				Age:    17,
 				Email:  "test@example.com",
 				Role:   "admin",
 				Phones: []string{"12345678901"},
 			},
 			expectedErr: ValidationErrors{
+				{Field: "ID", Err: fmt.Errorf("length must be 36")},
 				{Field: "Age", Err: fmt.Errorf("must be >= 18")},
 			},
 		},
@@ -139,18 +141,20 @@ func TestValidate(t *testing.T) {
 		t.Run(fmt.Sprintf("case %d: %s", i, tt.name), func(t *testing.T) {
 			err := Validate(tt.in)
 
-			// Сравниваем ошибки
+			// Comparing expected and actual errors
 			if tt.expectedErr == nil && err != nil {
 				t.Errorf("expected no error, but got: %v", err)
-			} else if tt.expectedErr != nil {
-				if ve, ok := err.(ValidationErrors); ok {
-					for j, veErr := range ve {
-						if veErr.Field != tt.expectedErr.(ValidationErrors)[j].Field || veErr.Err.Error() != tt.expectedErr.(ValidationErrors)[j].Err.Error() {
-							t.Errorf("expected error for field %s to be %v, but got %v", veErr.Field, tt.expectedErr.(ValidationErrors)[j].Err, veErr.Err)
-						}
+				return
+			}
+
+			var actErrors, expErrors ValidationErrors
+			if tt.expectedErr != nil && errors.As(err, &actErrors) {
+				for j, veErr := range actErrors {
+					if !errors.As(tt.expectedErr, &expErrors) && (veErr.Field != expErrors[j].Field ||
+						veErr.Err.Error() != expErrors.Error()) {
+						t.Errorf("expected error for field %s to be %v, but got %v",
+							veErr.Field, expErrors[j].Err, veErr.Err)
 					}
-				} else {
-					t.Errorf("expected ValidationErrors type, but got: %v", err)
 				}
 			}
 		})
