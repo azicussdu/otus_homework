@@ -9,7 +9,7 @@ import (
 )
 
 type User struct {
-	Email string `json:"email"`
+	Email string `json:"Email"` //nolint
 }
 
 type DomainStat map[string]int

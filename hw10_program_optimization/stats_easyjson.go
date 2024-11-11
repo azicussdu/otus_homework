@@ -36,7 +36,7 @@ func easyjsonE3ab7953DecodeGithubComAzicussduOtusHomeworkHw10ProgramOptimization
 			continue
 		}
 		switch key {
-		case "email":
+		case "Email":
 			out.Email = string(in.String())
 		default:
 			in.SkipRecursive()
@@ -53,7 +53,7 @@ func easyjsonE3ab7953EncodeGithubComAzicussduOtusHomeworkHw10ProgramOptimization
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"email\":"
+		const prefix string = ",\"Email\":"
 		out.RawString(prefix[1:])
 		out.String(string(in.Email))
 	}
