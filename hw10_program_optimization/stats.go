@@ -24,9 +24,10 @@ func countDomains(r io.Reader, domain string) (DomainStat, error) {
 
 	var user User
 	var emailDomain string
+
 	for scanner.Scan() {
-		line := scanner.Text()
-		err := easyjson.Unmarshal([]byte(line), &user)
+		line := scanner.Bytes()
+		err := easyjson.Unmarshal(line, &user)
 		if err != nil {
 			return nil, err
 		}
