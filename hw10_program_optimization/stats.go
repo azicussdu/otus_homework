@@ -14,6 +14,7 @@ type User struct {
 
 type DomainStat map[string]int
 
+// to run it: go test -v -count=1 -tags bench -bench=. -benchmem > out_file.txt.
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
 	return countDomains(r, domain)
 }
@@ -33,12 +34,12 @@ func countDomains(r io.Reader, domain string) (DomainStat, error) {
 		}
 
 		emailDomain = strings.ToLower(user.Email)
-		if !strings.Contains(emailDomain, domain) {
-			continue
-		}
 		atIndex := strings.Index(emailDomain, "@")
 		if atIndex != -1 {
-			result[emailDomain[atIndex+1:]]++
+			emailDomain = emailDomain[atIndex+1:]
+			if strings.Contains(emailDomain, domain) {
+				result[emailDomain]++
+			}
 		}
 	}
 
