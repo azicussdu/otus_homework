@@ -37,7 +37,7 @@ func countDomains(r io.Reader, domain string) (DomainStat, error) {
 		atIndex := strings.Index(emailDomain, "@")
 		if atIndex != -1 {
 			emailDomain = emailDomain[atIndex+1:]
-			if strings.Contains(emailDomain, domain) {
+			if strings.HasSuffix(emailDomain, "."+domain) {
 				result[emailDomain]++
 			}
 		}
