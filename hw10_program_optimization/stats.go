@@ -33,6 +33,10 @@ func countDomains(r io.Reader, domain string) (DomainStat, error) {
 			return nil, err
 		}
 
+		/*
+			ТУДУ: Проверка на последние символы как операция проще чем поиск собаки в строке.
+			Поэтому лучше было вначале проверить суффикс, а потом уже искать собаку
+		*/
 		emailDomain = strings.ToLower(user.Email)
 		atIndex := strings.Index(emailDomain, "@")
 		if atIndex != -1 {
