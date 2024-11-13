@@ -1,66 +1,55 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
-	"fmt"
+	"bufio"
 	"io"
-	"regexp"
 	"strings"
+
+	"github.com/mailru/easyjson" //nolint: depguard
 )
 
 type User struct {
-	ID       int
-	Name     string
-	Username string
-	Email    string
-	Phone    string
-	Password string
-	Address  string
+	Email string `json:"Email"` //nolint
 }
 
 type DomainStat map[string]int
 
+// to run it: go test -v -count=1 -tags bench -bench=. -benchmem > out_file.txt.
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
-	}
-	return countDomains(u, domain)
+	return countDomains(r, domain)
 }
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
-		}
-		result[i] = user
-	}
-	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
+func countDomains(r io.Reader, domain string) (DomainStat, error) {
 	result := make(DomainStat)
+	scanner := bufio.NewScanner(r)
 
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
+	var user User
+	var emailDomain string
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		err := easyjson.Unmarshal(line, &user)
 		if err != nil {
 			return nil, err
 		}
 
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
+		/*
+			ТУДУ: Проверка на последние символы как операция проще чем поиск собаки в строке.
+			Поэтому лучше было вначале проверить суффикс, а потом уже искать собаку
+		*/
+		emailDomain = strings.ToLower(user.Email)
+		atIndex := strings.Index(emailDomain, "@")
+		if atIndex != -1 {
+			emailDomain = emailDomain[atIndex+1:]
+			if strings.HasSuffix(emailDomain, "."+domain) {
+				result[emailDomain]++
+			}
 		}
 	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
 	return result, nil
 }
