@@ -28,7 +28,8 @@ func (tc *telnetCli) Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), tc.timeout)
 	defer cancel()
 
-	conn, err := (&net.Dialer{}).DialContext(ctx, "tcp", tc.address) // should be for ex: "127.0.0.1:3302"
+	conn, err := (&net.Dialer{}).
+		DialContext(ctx, "tcp", tc.address) // should be for ex: "127.0.0.1:3302"
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
@@ -46,16 +47,21 @@ func (tc *telnetCli) Close() error {
 
 func (tc *telnetCli) Send() error {
 	scanner := bufio.NewScanner(tc.in)
-	if tc.conn == nil {
-		return fmt.Errorf("connection closed by server")
-	}
+	retryCount := 0
 	for scanner.Scan() {
-		text := scanner.Text()
-
-		_, err := tc.conn.Write([]byte(text + "\n"))
-		if err != nil {
-			return err
+		if tc.conn == nil {
+			return fmt.Errorf("connection closed by server")
 		}
+
+		_, err := tc.conn.Write([]byte(scanner.Text() + "\n"))
+		if err != nil {
+			retryCount++
+			if retryCount >= 3 {
+				return fmt.Errorf("failed to send data with 3 attempts: %w", err)
+			}
+			continue
+		}
+		retryCount = 0
 	}
 	return scanner.Err()
 }

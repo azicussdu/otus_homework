@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -54,29 +55,55 @@ func main() {
 	// Graceful shutdown
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	var wg sync.WaitGroup
+	shutdown := make(chan struct{})
+	commDone := make(chan struct{})
+
+	// Handle shutdown signal
 	go func() {
 		<-sigs
-		err := client.Close()
-		if err != nil {
+		close(shutdown)
+	}()
+
+	// Sending data
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case <-shutdown:
 			return
+		default:
+			if err := client.Send(); err != nil {
+				fmt.Println("Send error:", err)
+				close(shutdown) // Signal shutdown on error
+			}
 		}
-		fmt.Println("Telnet Client is closed")
-		os.Exit(0)
+	}()
+
+	// Receiving data
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		select {
+		case <-shutdown:
+			return
+		default:
+			if err := client.Receive(); err != nil {
+				fmt.Println("Receive error:", err)
+				close(shutdown) // Signal shutdown on error
+			}
+		}
 	}()
 
 	go func() {
-		if err := client.Send(); err != nil {
-			fmt.Println("Send error:", err)
-			err := client.Close()
-			if err != nil {
-				return
-			}
-			os.Exit(1)
-		}
+		wg.Wait()
+		close(commDone)
 	}()
 
-	if err := client.Receive(); err != nil {
-		fmt.Println("Receive error:", err)
-		return
+	<-commDone
+	err = client.Close() // Close the client after send and receive are done
+	if err != nil {
+		fmt.Println("Error closing connection:", err)
 	}
 }
