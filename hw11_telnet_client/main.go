@@ -102,8 +102,4 @@ func main() {
 	}()
 
 	<-commDone
-	err = client.Close() // Close the client after send and receive are done
-	if err != nil {
-		fmt.Println("Error closing connection:", err)
-	}
 }
