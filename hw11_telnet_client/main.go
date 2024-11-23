@@ -70,14 +70,9 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		select {
-		case <-shutdown:
-			return
-		default:
-			if err := client.Send(); err != nil {
-				fmt.Println("Send error:", err)
-				close(shutdown) // Signal shutdown on error
-			}
+		if err := client.Send(); err != nil {
+			fmt.Println("Send error:", err)
+			close(shutdown) // Signal shutdown on error
 		}
 	}()
 
@@ -85,21 +80,14 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		select {
-		case <-shutdown:
-			return
-		default:
-			if err := client.Receive(); err != nil {
-				fmt.Println("Receive error:", err)
-				close(shutdown) // Signal shutdown on error
-			}
+		if err := client.Receive(); err != nil {
+			fmt.Println("Receive error:", err)
+			close(shutdown) // Signal shutdown on error
 		}
 	}()
 
-	go func() {
-		wg.Wait()
-		close(commDone)
-	}()
+	wg.Wait()
+	close(commDone)
 
 	<-commDone
 }
