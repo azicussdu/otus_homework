@@ -45,22 +45,9 @@ func main() {
 		fmt.Println("Error connecting:", err)
 		os.Exit(1)
 	}
-	defer func(client TelnetClient) {
-		err := client.Close()
-		if err != nil {
-			fmt.Println("Error closing connection:", err)
-		}
-	}(client)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			_ = client.Close() // Ensure connection is closed on signal
-		}
-	}()
 
 	sendErrCh := make(chan error, 1)
 	receiveErrCh := make(chan error, 1)
@@ -74,7 +61,7 @@ func main() {
 
 	select {
 	case <-ctx.Done():
-		fmt.Println("Received shutdown signal")
+		_ = client.Close()
 	case err := <-sendErrCh:
 		if err != nil {
 			fmt.Println("Send error:", err)
