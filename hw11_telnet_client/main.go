@@ -1,10 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -52,42 +52,36 @@ func main() {
 		}
 	}(client)
 
-	// Graceful shutdown
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	var wg sync.WaitGroup
-	shutdown := make(chan struct{})
-	commDone := make(chan struct{})
-
-	// Handle shutdown signal
 	go func() {
-		<-sigs
-		close(shutdown)
+		select {
+		case <-ctx.Done():
+			_ = client.Close() // Ensure connection is closed on signal
+		}
 	}()
 
-	// Sending data
-	wg.Add(1)
+	sendErrCh := make(chan error, 1)
+	receiveErrCh := make(chan error, 1)
+
 	go func() {
-		defer wg.Done()
-		if err := client.Send(); err != nil {
+		sendErrCh <- client.Send()
+	}()
+	go func() {
+		receiveErrCh <- client.Receive()
+	}()
+
+	select {
+	case <-ctx.Done():
+		fmt.Println("Received shutdown signal")
+	case err := <-sendErrCh:
+		if err != nil {
 			fmt.Println("Send error:", err)
-			close(shutdown) // Signal shutdown on error
 		}
-	}()
-
-	// Receiving data
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := client.Receive(); err != nil {
+	case err := <-receiveErrCh:
+		if err != nil {
 			fmt.Println("Receive error:", err)
-			close(shutdown) // Signal shutdown on error
 		}
-	}()
-
-	wg.Wait()
-	close(commDone)
-
-	<-commDone
+	}
 }
