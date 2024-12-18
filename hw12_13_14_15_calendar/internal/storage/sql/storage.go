@@ -3,12 +3,13 @@ package sqlstorage
 import (
 	"errors"
 	"fmt"
-	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage"
-	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib" // pgx driver for sqlx
-	"github.com/jmoiron/sqlx"
-	"github.com/pressly/goose/v3"
 	"time"
+
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage" //nolint:depguard
+	"github.com/jackc/pgx/v5/pgconn"                                             //nolint:depguard
+	_ "github.com/jackc/pgx/v5/stdlib"                                           //nolint:depguard
+	"github.com/jmoiron/sqlx"                                                    //nolint:depguard
+	"github.com/pressly/goose/v3"                                                //nolint:depguard
 )
 
 type SQLStorage struct {
@@ -104,7 +105,7 @@ func (s *SQLStorage) ListEventsByDay(date time.Time) ([]storage.Event, error) {
 		FROM events
 		WHERE DATE(start_time) = $1`
 	var events []storage.Event
-	err := s.db.Select(&events, query, date) //dateOnly := date.Format("2006-01-02") ??
+	err := s.db.Select(&events, query, date) // dateOnly := date.Format("2006-01-02") ??
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (s *SQLStorage) ListEventsByMonth(startDate time.Time) ([]storage.Event, er
 	return events, nil
 }
 
-// Utility function to check for unique constraint violations
+// Utility function to check for unique constraint violations.
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

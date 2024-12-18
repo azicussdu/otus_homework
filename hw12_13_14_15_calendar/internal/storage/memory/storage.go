@@ -1,13 +1,14 @@
 package memorystorage
 
 import (
-	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage"
 	"sync"
 	"time"
+
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage" //nolint:depguard
 )
 
 type MemoryStorage struct {
-	mu        sync.RWMutex //nolint:unused
+	mu        sync.RWMutex
 	events    map[uint]storage.Event
 	idCounter uint
 }

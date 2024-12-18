@@ -1,12 +1,13 @@
 package memorystorage
 
 import (
-	storage2 "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
 	"time"
+
+	storage2 "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage" //nolint:depguard
+	"github.com/stretchr/testify/assert"                                                  //nolint:depguard
+	"github.com/stretchr/testify/require"                                                 //nolint:depguard
 )
 
 func TestMemoryStorage_CreateAndGet(t *testing.T) {
@@ -29,7 +30,7 @@ func TestMemoryStorage_CreateAndGet(t *testing.T) {
 	assert.Equal(t, event.UserID, retrieved.UserID)
 }
 
-func TestMemoryStorage_CreateDuplicate(T *testing.T) {
+func TestMemoryStorage_CreateDuplicate(t *testing.T) {
 	storage := New()
 
 	event := storage2.Event{
@@ -40,14 +41,14 @@ func TestMemoryStorage_CreateDuplicate(T *testing.T) {
 	}
 
 	_, err := storage.Create(event)
-	require.NoError(T, err)
+	require.NoError(t, err)
 
 	event.StartTime = event.StartTime.Add(time.Minute * 30)
 	_, err = storage.Create(event)
-	require.ErrorIs(T, err, storage2.ErrDateBusy)
+	require.ErrorIs(t, err, storage2.ErrDateBusy)
 }
 
-func TestMemoryStorage_Delete(T *testing.T) {
+func TestMemoryStorage_Delete(t *testing.T) {
 	storage := New()
 
 	event := storage2.Event{
@@ -58,13 +59,13 @@ func TestMemoryStorage_Delete(T *testing.T) {
 	}
 
 	id, err := storage.Create(event)
-	require.NoError(T, err)
+	require.NoError(t, err)
 
 	err = storage.Delete(id)
-	require.NoError(T, err)
+	require.NoError(t, err)
 
 	_, ok := storage.events[id]
-	require.False(T, ok)
+	require.False(t, ok)
 }
 
 func TestMemoryStorage_ListEventsByDay(t *testing.T) {
@@ -105,7 +106,7 @@ func TestMemoryStorage_ListEventsByDay(t *testing.T) {
 	assert.Equal(t, event2.Title, events[1].Title)
 }
 
-func TestMemoryStorage_ConcurrentAccess(t *testing.T) {
+func TestMemoryStorage_ConcurrentAccess(_ *testing.T) {
 	storage := New()
 	event := storage2.Event{
 		Title:     "Test Event",

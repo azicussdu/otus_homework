@@ -3,14 +3,17 @@ package config
 import (
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"log"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 // При желании конфигурацию можно вынести в internal/config.
 // Организация конфига в main принуждает нас сужать API компонентов, использовать
 // при их конструировании только необходимые параметры, а также уменьшает вероятность циклической зависимости.
+//
+//nolint:tagliatelle
 type Config struct {
 	ServerConf   ServerConf   `yaml:"server"`
 	DatabaseConf DatabaseConf `yaml:"database"`
@@ -23,6 +26,7 @@ type ServerConf struct {
 	Port int    `yaml:"port"`
 }
 
+//nolint:tagliatelle
 type DatabaseConf struct {
 	Host          string `yaml:"host"`
 	Port          int    `yaml:"port"`

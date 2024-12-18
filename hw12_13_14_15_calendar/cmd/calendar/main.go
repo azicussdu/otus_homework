@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	sqlstorage "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage/sql"
 	"log"
 	"os"
 	"os/signal"
@@ -11,11 +10,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/app"
-	config2 "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"
-	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage/memory"
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/app"                          //nolint:depguard
+	config2 "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"               //nolint:depguard
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/logger"                       //nolint:depguard
+	internalhttp "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/server/http"     //nolint:depguard
+	memorystorage "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage/memory" //nolint:depguard
+	sqlstorage "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage/sql"       //nolint:depguard
 )
 
 var configFile string
@@ -35,7 +35,7 @@ func main() {
 	config, err := config2.NewConfig(configFile)
 	if err != nil {
 		log.Printf("failed to read config: %v", err)
-		os.Exit(1) //nolint:gocritic
+		os.Exit(1)
 	}
 
 	logg := logger.New(config.Logger.Level)
@@ -48,11 +48,11 @@ func main() {
 		storage, err = sqlstorage.New(getDataSourcePath(config), config.DatabaseConf.MigrationPath)
 		if err != nil {
 			logg.Error("failed to initialize database storage: " + err.Error())
-			os.Exit(1) //nolint:gocritic
+			os.Exit(1)
 		}
 	default:
 		logg.Error("unknown storage type: " + config.StorageType)
-		os.Exit(1) //nolint:gocritic
+		os.Exit(1)
 	}
 
 	calendar := app.New(logg, storage)

@@ -3,10 +3,11 @@ package internalhttp
 import (
 	"context"
 	"fmt"
-	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config" //nolint:depguard
 )
 
 type Server struct {
@@ -31,8 +32,9 @@ func NewServer(logger Logger, app Application, conf config.ServerConf) *Server {
 		logger: logger,
 		app:    app,
 		server: &http.Server{
-			Addr:    conf.Host + ":" + strconv.Itoa(conf.Port),
-			Handler: logMiddleware(http.DefaultServeMux, logger),
+			Addr:              conf.Host + ":" + strconv.Itoa(conf.Port),
+			Handler:           logMiddleware(http.DefaultServeMux, logger),
+			ReadHeaderTimeout: 10 * time.Second, // Adjust the timeout as necessary
 		},
 	}
 }
@@ -50,7 +52,8 @@ func logMiddleware(next http.Handler, logger Logger) http.Handler {
 		next.ServeHTTP(rec, r)
 
 		latency := time.Since(start)
-		logger.Info(fmt.Sprintf("%s [%s] %s %s %s %d %d \"%s\"", clientIP, start.Format(time.RFC1123), method, path, proto, rec.status, latency.Milliseconds(), userAgent))
+		logger.Info(fmt.Sprintf("%s [%s] %s %s %s %d %d \"%s\"", clientIP,
+			start.Format(time.RFC1123), method, path, proto, rec.status, latency.Milliseconds(), userAgent))
 	})
 }
 

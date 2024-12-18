@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//nolint:tagliatelle
 type Event struct {
 	ID           uint           `json:"id"`
 	Title        string         `json:"title"`
