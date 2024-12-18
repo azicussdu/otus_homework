@@ -70,7 +70,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return s.server.ListenAndServe()
 }
 
-func (s *Server) helloHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) helloHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("hello Otus Student!"))
 }
