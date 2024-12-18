@@ -2,19 +2,37 @@ package app
 
 import (
 	"context"
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage"
+	"time"
 )
 
-type App struct { // TODO
+type App struct {
+	logger  Logger
+	storage Storage
 }
 
-type Logger interface { // TODO
+type Logger interface {
+	Info(msg string)
+	Error(msg string)
+	Debug(msg string)
+	Warn(msg string)
 }
 
-type Storage interface { // TODO
+type Storage interface {
+	Create(event storage.Event) (uint, error)
+	Update(eventID uint, event storage.Event) error
+	Delete(eventID uint) error
+	ListEventsByDay(startDate time.Time) ([]storage.Event, error)
+	ListEventsByWeek(startDate time.Time) ([]storage.Event, error)
+	ListEventsByMonth(startDate time.Time) ([]storage.Event, error)
+	Close() error
 }
 
 func New(logger Logger, storage Storage) *App {
-	return &App{}
+	return &App{
+		logger:  logger,
+		storage: storage,
+	}
 }
 
 func (a *App) CreateEvent(ctx context.Context, id, title string) error {

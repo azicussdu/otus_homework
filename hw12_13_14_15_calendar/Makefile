@@ -8,7 +8,7 @@ build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
-	$(BIN) -config ./configs/config.toml
+	$(BIN) -config ./configs/config.yaml
 
 build-img:
 	docker build \
@@ -31,4 +31,19 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+migrate:
+	goose -dir migrations postgres "host=localhost port=5432 user=azicussdu password=azicussdu dbname=calendar_db sslmode=disable" up
+
+clean:
+	rm -f $(BIN)
+
+help:
+	@echo "  make build     - Compile the service binary"
+	@echo "  make run       - Compile and run the service with the default config"
+	@echo "  make test      - Run unit tests with the race detector"
+	@echo "  make lint      - Run golangci-lint"
+	@echo "  make migrate   - Apply database migrations (if applicable)"
+	@echo "  make clean     - Remove build artifacts"
+	@echo "  make help      - Display this help message"
+
+.PHONY: build run build-img run-img version test lint migrate clean help
