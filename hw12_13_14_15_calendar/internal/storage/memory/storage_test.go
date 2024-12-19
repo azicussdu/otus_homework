@@ -102,8 +102,9 @@ func TestMemoryStorage_ListEventsByDay(t *testing.T) {
 	events, err := storage.ListEventsByDay(time.Now())
 	require.NoError(t, err)
 	require.Len(t, events, 2)
-	assert.Equal(t, event1.Title, events[0].Title)
-	assert.Equal(t, event2.Title, events[1].Title)
+	require.Contains(t, events, event1)
+	require.Contains(t, events, event2)
+	require.NotContains(t, events, event3)
 }
 
 func TestMemoryStorage_ConcurrentAccess(_ *testing.T) {
