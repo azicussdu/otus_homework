@@ -1,0 +1,14 @@
+server:
+  host: "localhost"
+  port: 8080
+database:
+  host: "localhost"
+  port: 5432
+  type: "postgres"
+  user: "azicussdu"
+  password: "azicussdu"
+  db_name: "calendar_db"
+  migration_path: "./migrations"
+logging:
+  level: "DEBUG"
+storage_type: "memory" #or database
