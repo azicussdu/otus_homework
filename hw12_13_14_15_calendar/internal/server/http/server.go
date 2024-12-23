@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config" //nolint:depguard
-	"strings"
 )
 
 type Server struct {
@@ -45,7 +45,6 @@ func NewServer(logger Logger, app Application, conf config.ServerConf) *Server {
 
 func logMiddleware(next http.Handler, logger Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if isUnwantedRequest(r) {
 			next.ServeHTTP(w, r)
 			return
