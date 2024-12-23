@@ -4,6 +4,9 @@ DOCKER_IMG="calendar:develop"
 GIT_HASH := $(shell git log --format="%h" -n 1)
 LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%dT%H:%M:%S) -X main.gitHash=$(GIT_HASH)
 
+DB_URL := "postgres://azicussdu:azicussdu@localhost:5432/calendar_db?sslmode=disable"
+MIGRATE_DIR="./migrations"
+
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
@@ -31,8 +34,22 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-migrate:
-	goose -dir migrations postgres "host=localhost port=5432 user=azicussdu password=azicussdu dbname=calendar_db sslmode=disable" up
+migrate-up:
+	goose -dir $(MIGRATE_DIR) postgres "$(DB_URL)" up
+
+migrate-down:
+	goose -dir $(MIGRATE_DIR) postgres "$(DB_URL)" down
+
+migrate-status:
+	goose -dir $(MIGRATE_DIR) postgres "$(DB_URL)" status
+
+# command sample: make migrate-create name=alter_events_table
+migrate-create:
+	@if [ -z "$(name)" ]; then \
+		echo "Error: Please specify a migration name. Usage: make migrate-create name=example"; \
+		exit 1; \
+	fi
+	goose -dir $(MIGRATE_DIR) create $(name) sql
 
 clean:
 	rm -f $(BIN)
@@ -46,4 +63,4 @@ help:
 	@echo "  make clean     - Remove build artifacts"
 	@echo "  make help      - Display this help message"
 
-.PHONY: build run build-img run-img version test lint migrate clean help
+.PHONY: build run build-img run-img version test lint migrate-up migrate-down migrate-status migrate-create clean help

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config" //nolint:depguard
+	"strings"
 )
 
 type Server struct {
@@ -28,12 +29,15 @@ type Application interface {
 }
 
 func NewServer(logger Logger, app Application, conf config.ServerConf) *Server {
+	mux := http.NewServeMux()
+	mux.Handle("/hello", logMiddleware(http.HandlerFunc(helloHandler), logger))
+
 	return &Server{
 		logger: logger,
 		app:    app,
 		server: &http.Server{
 			Addr:              conf.Host + ":" + strconv.Itoa(conf.Port),
-			Handler:           logMiddleware(http.DefaultServeMux, logger),
+			Handler:           mux,
 			ReadHeaderTimeout: 10 * time.Second, // Adjust the timeout as necessary
 		},
 	}
@@ -41,6 +45,12 @@ func NewServer(logger Logger, app Application, conf config.ServerConf) *Server {
 
 func logMiddleware(next http.Handler, logger Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if isUnwantedRequest(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 		clientIP := r.RemoteAddr
 		userAgent := r.UserAgent()
@@ -57,9 +67,24 @@ func logMiddleware(next http.Handler, logger Logger) http.Handler {
 	})
 }
 
-func (s *Server) Start(ctx context.Context) error {
-	http.HandleFunc("/hello", s.helloHandler)
+func isUnwantedRequest(r *http.Request) bool {
+	unwantedPaths := []string{"/favicon.ico", "/static/"}
+	for _, prefix := range unwantedPaths {
+		if strings.HasPrefix(r.URL.Path, prefix) {
+			return true
+		}
+	}
 
+	// Skip logging for 404 pages
+	return r.Method == http.MethodGet && r.URL.Path == "/non-existent"
+}
+
+func helloHandler(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("hello Otus Student!"))
+}
+
+func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 		ctxShutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -71,11 +96,6 @@ func (s *Server) Start(ctx context.Context) error {
 
 	s.logger.Info(fmt.Sprintf("Starting server on %s", s.server.Addr))
 	return s.server.ListenAndServe()
-}
-
-func (s *Server) helloHandler(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte("hello Otus Student!"))
 }
 
 func (s *Server) Stop(ctx context.Context) error {

@@ -3,21 +3,24 @@ package sqlstorage
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"  //nolint:depguard
 	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage" //nolint:depguard
 	"github.com/jackc/pgx/v5/pgconn"                                             //nolint:depguard
 	_ "github.com/jackc/pgx/v5/stdlib"                                           //nolint:depguard
 	"github.com/jmoiron/sqlx"                                                    //nolint:depguard
-	"github.com/pressly/goose/v3"                                                //nolint:depguard
 )
 
 type SQLStorage struct {
 	db *sqlx.DB
 }
 
-func New(dataSource string, migrateDir string) (*SQLStorage, error) {
+func New(dbCfg config.DatabaseConf) (*SQLStorage, error) {
 	// dataSource := "postgres://username:password@localhost:5432/mydatabase"
+	dataSource := dbCfg.Type + "://" + dbCfg.User + ":" + dbCfg.Password + "@" +
+		dbCfg.Host + ":" + strconv.Itoa(dbCfg.Port) + "/" + dbCfg.DBName
 
 	// Initialize sqlx with pgx/stdlib driver (high level connection)
 	db, err := sqlx.Connect("pgx", dataSource)
@@ -31,24 +34,7 @@ func New(dataSource string, migrateDir string) (*SQLStorage, error) {
 	}
 
 	sqlStorage := &SQLStorage{db: db}
-
-	// Run migrations
-	if err = sqlStorage.runMigrations(migrateDir); err != nil {
-		return nil, fmt.Errorf("failed to run migrations: %w", err)
-	}
-
 	return sqlStorage, nil
-}
-
-func (s *SQLStorage) runMigrations(migrateDir string) error {
-	if err := goose.SetDialect("postgres"); err != nil {
-		return fmt.Errorf("failed to set goose dialect: %w", err)
-	}
-
-	if err := goose.Up(s.db.DB, migrateDir); err != nil {
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-	return nil
 }
 
 func (s *SQLStorage) Close() error {

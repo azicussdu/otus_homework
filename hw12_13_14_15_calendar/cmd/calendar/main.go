@@ -6,12 +6,11 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/app"                          //nolint:depguard
-	config2 "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"               //nolint:depguard
+	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/config"                       //nolint:depguard
 	"github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/logger"                       //nolint:depguard
 	internalhttp "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/server/http"     //nolint:depguard
 	memorystorage "github.com/azicussdu/otus_homework/hw12_13_14_15_calendar/internal/storage/memory" //nolint:depguard
@@ -32,32 +31,32 @@ func main() {
 		return
 	}
 
-	config, err := config2.NewConfig(configFile)
+	cfg, err := config.NewConfig(configFile)
 	if err != nil {
 		log.Printf("failed to read config: %v", err)
 		os.Exit(1)
 	}
 
-	logg := logger.New(config.Logger.Level)
+	logg := logger.New(cfg.Logger.Level)
 
 	var storage app.Storage
-	switch config.StorageType {
+	switch cfg.StorageType {
 	case "memory":
 		storage = memorystorage.New()
 	case "database":
-		storage, err = sqlstorage.New(getDataSourcePath(config), config.DatabaseConf.MigrationPath)
+		storage, err = sqlstorage.New(cfg.DatabaseConf)
 		if err != nil {
 			logg.Error("failed to initialize database storage: " + err.Error())
 			os.Exit(1)
 		}
 	default:
-		logg.Error("unknown storage type: " + config.StorageType)
+		logg.Error("unknown storage type: " + cfg.StorageType)
 		os.Exit(1)
 	}
 
 	calendar := app.New(logg, storage)
 
-	server := internalhttp.NewServer(logg, calendar, config.ServerConf)
+	server := internalhttp.NewServer(logg, calendar, cfg.ServerConf)
 
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
@@ -79,13 +78,5 @@ func main() {
 	if err = server.Start(ctx); err != nil {
 		logg.Error("failed to start http server: " + err.Error())
 		cancel()
-		os.Exit(1) //nolint:gocritic
 	}
-}
-
-func getDataSourcePath(config *config2.Config) string {
-	// dsn := "postgres://username:password@localhost:5432/mydatabase"
-	return config.DatabaseConf.Type + "://" + config.DatabaseConf.User + ":" +
-		config.DatabaseConf.Password + "@" + config.DatabaseConf.Host + ":" +
-		strconv.Itoa(config.DatabaseConf.Port) + "/" + config.DatabaseConf.DBName
 }
